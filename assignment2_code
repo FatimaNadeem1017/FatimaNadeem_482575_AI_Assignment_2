@@ -1,0 +1,154 @@
+#include<bits/stdc++.h>
+#include<climits>
+using namespace std;
+
+struct PuzzleState {
+    vector<vector<int>> board;
+    int cost;
+    int heuristic;
+};
+
+pair<int, int> findPosition(const vector<vector<int>>& board, int num) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (board[i][j] == num) {
+                return make_pair(i, j);
+            }
+        }
+    }
+    return make_pair(-1, -1);
+}
+
+int calculateHeuristic(const vector<vector<int>>& board) {
+    int heuristic = 0;
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (board[i][j] != 0) {
+                auto goalPosition = findPosition(board, board[i][j]);
+                heuristic += abs(i - goalPosition.first) + abs(j - goalPosition.second);
+            }
+        }
+    }
+    return heuristic;
+}
+
+bool isGoalState(const vector<vector<int>>& board) {
+    vector<vector<int>> goal = {{0, 1, 2}, {3, 4, 5}, {6, 7, 8}};
+    return board == goal;
+}
+
+bool compareAStar(const PuzzleState& a, const PuzzleState& b) {
+    return (a.cost + a.heuristic) > (b.cost + b.heuristic);
+}
+
+bool compareGreedy(const PuzzleState& a, const PuzzleState& b) {
+    return a.heuristic > b.heuristic;
+}
+
+void generateNewStates(const PuzzleState& current, priority_queue<PuzzleState, vector<PuzzleState>, function<bool(const PuzzleState&, const PuzzleState&)>>& pq, map<vector<vector<int>>, bool>& visited) {
+    int dx[] = {0, 0, -1, 1}; // Change in x-coordinate (up, down, left, right)
+    int dy[] = {-1, 1, 0, 0}; // Change in y-coordinate (up, down, left, right)
+
+    pair<int, int> emptyPosition = findPosition(current.board, 0); // Find the empty position
+
+    for (int i = 0; i < 4; ++i) {
+        int newX = emptyPosition.first + dx[i];
+        int newY = emptyPosition.second + dy[i];
+
+        if (newX >= 0 && newX < 3 && newY >= 0 && newY < 3) {
+            vector<vector<int>> newBoard = current.board;
+            swap(newBoard[emptyPosition.first][emptyPosition.second], newBoard[newX][newY]); // Swap empty position with tile
+
+            if (!visited[newBoard]) {
+                PuzzleState newState = {newBoard, current.cost + 1, calculateHeuristic(newBoard)};
+                pq.push(newState); // Add to priority queue
+                visited[newBoard] = true;
+            }
+        }
+    }
+}
+
+void printPuzzle(const vector<vector<int>>& board) {
+    for (const auto& row : board) {
+        cout << "[";
+        for (size_t i = 0; i < row.size(); ++i) {
+            if (i != 0) {
+                cout << " ";
+            }
+            if (row[i] == 0) {
+                cout << " ";
+            } else {
+                cout << row[i];
+            }
+            if (i != row.size() - 1) {
+                cout << " ,";
+            }
+        }
+        cout << "]" << endl;
+    }
+}
+
+void AStarSearch(const vector<vector<int>>& initial) {
+    priority_queue<PuzzleState, vector<PuzzleState>, function<bool(const PuzzleState&, const PuzzleState&)>> pq(compareAStar);
+
+    map<vector<vector<int>>, bool> visited;
+    PuzzleState initialState = {initial, 0, calculateHeuristic(initial)};
+    pq.push(initialState);
+
+    while (!pq.empty()) {
+        PuzzleState current = pq.top();
+        pq.pop();
+
+        if (isGoalState(current.board)) {
+            cout << "Goal state reached" << endl;
+            cout << "Final State:" << endl;
+            printPuzzle(current.board); // Print the final state in block format
+            return;
+        }
+
+        visited[current.board] = true;
+
+        generateNewStates(current, pq, visited); // Generate and add new states to the priority queue
+    }
+
+    cout << "Goal state cannot be reached" << endl;
+}
+
+void GreedySearch(const vector<vector<int>>& initial) {
+    priority_queue<PuzzleState, vector<PuzzleState>, function<bool(const PuzzleState&, const PuzzleState&)>> pq(compareGreedy);
+
+    map<vector<vector<int>>, bool> visited;
+    PuzzleState initialState = {initial, 0, calculateHeuristic(initial)};
+    pq.push(initialState);
+
+    while (!pq.empty()) {
+        PuzzleState current = pq.top();
+        pq.pop();
+
+        if (isGoalState(current.board)) {
+            cout << "Goal state reached" << endl;
+            cout << "Final State:" << endl;
+            printPuzzle(current.board); // Print the final state
+            return;
+        }
+
+        visited[current.board] = true;
+
+        generateNewStates(current, pq, visited); // Generate and add new states to the priority queue
+    }
+
+    cout << "Goal state cannot be reached" << endl;
+}
+
+
+int main() {
+    vector<vector<int>> initial = {{8, 0, 6}, {5, 4, 7}, {2, 3, 1}};
+
+    cout << "Running A* Search Algorithm..." << endl;
+    AStarSearch(initial);
+
+    cout << "\nRunning Greedy Search Algorithm..." << endl;
+    GreedySearch(initial);
+
+    return 0;
+}
